@@ -1,101 +1,106 @@
-Attachment:
+Here is a structured and refined version of your meta-prompt.
 
-AD ID prefix dictionary
+This "meta-prompt" is designed to be given to me (Gemini) to generate the final, optimized NotebookLM prompt you need. It logically organizes all your requirements, constraints, and specific instructions (like the update logic and formatting) into a clear, actionable request.
 
-AD agreeing parties dictionary
+---
 
-GITOPS AD example
+### **Refined Meta-Prompt for Gemini**
 
-OCP-BM AD example
+**Attachments (Assume these are provided):**
 
+1.  `AD ID prefix dictionary` (Contains prefixes like OCP-BM, GITOPS, etc.)
+2.  `AD agreeing parties dictionary` (Contains roles like "Platform Engineering," "Security," etc.)
+3.  `GITOPS AD example` (The current AD file for GITOPS)
+4.  `OCP-BM AD example` (The current AD files for OCP-BM)
 
+**Your Role:** I am a Red Hat Consulting Architect.
 
-I am a Red Hat consulting architect.
+**My Goal:** I need to create and maintain an Architecture Decision (AD) repository for designing OCP / ODF / RHOAI. I use NotebookLM to manage this process.
 
+**My Task:**
+Generate a **single, repeatable prompt for NotebookLM** that I can use to review my existing ADs. The prompt must adhere to all constraints listed below.
 
+**Context (Uploaded in NotebookLM):**
 
-I need to create and maintain an architecture decision (AD) repository for designing OCP / ODF / RHOAI.
+- Latest documentation PDFs for:
+  - OpenShift Container Platform (OCP)
+  - OpenShift Data Foundation (ODF)
+  - OpenShift Logging
+  - OpenShift GitOps
+  - OpenShift Pipelines
+  - Red Hat OpenShift AI Self-Managed (RHOAI)
+- The `AD ID prefix dictionary`
+- The `AD agreeing parties dictionary`
 
+**AD Structure Reference:**
 
+- **ID:** Unique, using a prefix from the dictionary (e.g., `OCP-BM-01`).
+- **Title:** A concise title.
+- **Issue:** The architectural question being addressed.
+- **Assumptions:** Context/conditions for the AD's relevance (e.g., "The environment is disconnected."). Must be present, even if `N/A`.
+- **Alternatives:** At least two or more options.
+- **Justification:** Rationale for each alternative.
+- **Implication:** Consequences of choosing each alternative.
+- **Agreeing Parties:** A list of roles from the dictionary.
 
-Each AD has:
+---
 
-An unique ID with a prefix. Prefixes are defined in the attached architecture decisions id prefix dictionary
+### **Requirements for the Generated NotebookLM Prompt**
 
-A title
+Create a NotebookLM prompt that instructs it to perform the following analysis, respecting these strict rules:
 
-An issue or architectural question
+**1. Character Limit:**
 
-Optionally one or more assumptions. Most of the time this field is set to N/A. An assumption is the context/condition to say when reviewing this AD is pertinent.
+- The _entire_ generated prompt must be **under 2000 characters**.
 
-Ex: For an AD about choosing the mirrored image registry for OCP, the assumption would be: The environment is disconnected.
+**2. Scope & Focus:**
 
-At least two or more alternatives
+- **Only** analyze ADs with the prefixes **OCP-BM** and **GITOPS**, based on the provided example files.
+- Ignore all other AD prefixes (like ODF, RHOAI, etc.) for this analysis.
 
-Justification for each alternative
+**3. Core Task & Output Logic:**
 
-Implication for each alternative
+- You will review the provided `OCP-BM AD example` and `GITOPS AD example` files against the latest documentation in your sources.
+- For each AD, you must determine if it needs to be **Created**, **Updated**, or **Removed**.
+- Your output must be synthetic, showing _only_ the required changes.
 
-Several agreeing parties. Agreeing parties are defined in the attached agreeing parties dictionary
+**4. Specific Logic for "Update":**
 
+- The provided AD examples contain _all_ sections (ID, Title, Issue, Assumptions, Alternatives, Justification, Implication, Agreeing Parties).
+- When an AD needs an **Update**, you must _only_ list the specific sections that require modification.
+- **Crucially:** If you review an existing AD (like `OCP-BM-01`) and find **no changes** are needed based on the latest docs, you MUST explicitly state:
+  `**OCP-BM-01: [Title]**`
+  `* No updates required.`
+- Do NOT reprint the AD's existing content if no update is needed.
 
+**5. Specific Logic for "Create":**
 
-I am using NotebookLM to check if the AD should be updated or removed (because it is obsolete) or newly added (because new features have been released). 
+- If new features or changes in the source documents warrant a **new** AD, generate it.
+- New AD IDs must use a two-digit format (e.g., `OCP-BM-XX` or `GITOPS-XX`). Do not use three-digit IDs.
+- You must generate _all_ required fields: ID, Title, Issue, Assumptions (use `N/A` if none), Alternatives (at least 2), Justification (for each), Implication (for each), and Agreeing Parties (from the dictionary).
 
+**6. Specific Logic for "Remove":**
 
+- If an AD is obsolete (e.g., based on a deprecated feature), recommend its **Removal**.
+- State the reason clearly:
+  `**[AD ID]: [Title]**`
+  `* Action: Remove`
+  `* Reason: [Briefly explain why, e.g., "Feature is deprecated in OCP X.X"]`
 
-In NotebookLM i have uploaded all the latest version documentation pdf as the source document for:
+**7. Content & Accuracy:**
 
-OpenShift Container Platform
+- Ensure no ADs mention or recommend deprecated features (unless marking for removal).
+- Any feature identified as "Technology Preview" in the sources must be explicitly flagged with **(TP)** in the AD text if it is not already.
 
-OpenShift Data Foundation
+**8. Formatting Requirements:**
 
-OpenShift Logging
+- Strictly follow this format for all fields: `**[Field Name]:** [Text]`.
+  - Example: `**Assumptions:** The environment is disconnected.`
+- When listing alternatives, justifications, etc., use bullet points.
+- **Inject a blank line between bullet list items** to ensure clear, readable formatting in the output.
+- Keep the AD ID and Title intact and together (e.g., `**OCP-BM-02: Title of AD**`) when reporting updates.
+- Do not mix content from different ADs.
 
-OpenShift GitOps
+**9. Repeatability:**
 
-OpenShift Pipelines
-
-Red Hat OpenShift AI Self-Managed
-
-
-
-I have also uploaded in NotebookLM the dictionaries for AD ID prefixes and AD agreeing parties also.
-
-
-
-
-
-Here is an example of two AD files that are part of my AD repository.
-
-
-
-NotebookLM has a prompt limitation of 2000 characters maximum.
-
-Apparently NotebookLM sometimes could have issue to identify content by using file name of the file that has been injected as source
-
-Help me to create one prompt (that will not exceed more than 2000 chars), that will:
-
-allow me to review the AD using NotebookLM in the most synthetic way indicating the AD that needs to be created/updated/removed.
-
-for AD that need to be created / updated only the parts that need to be modified should be indicated: titles, questions, assumptions, alternatives, justifications, implications, agreeing parties when an AD update is required.
-
-ensure the AD should not mention any deprecated features. Any tech-preview feature should be flagged (TP) is not done properly.
-
-
-
-The prompt should be repeatable as much as possible when running several times after a systematic refresh context action on NotebookLM. So we have to take care there are few deviations, no hallucination on NotebookLM, the generated AD content is not mixed between several AD, the AD id with its title are kept intact, when updates are required. The prompt also should ensure blank lines are injected between AD content bullets list items, to get a proper format.
-
-
-
-Help me to streamline this process and prompt for NotebookLM integrating all the requirements and constraints above. If more than one prompt is required because compacting all of these beyond 2000 chars is impossible, tell me so we will adopt conversionnal style.
-
-I would like the prompt to focus only on OCP-BM and GITOPS, not analyzing others AD.
-
-I would like it does not generate ID with three number when suggestiong new AD. AD should be OCP-BM-XX or GITOPS-XX.
-
-Ensure It does not forgot to generate alternatives, implications, agreeing parties, assumptions (even most of time value is N/A),
-
-Ensure it is overwritting the existing AD ID of existing AD (ex: OCP-BM-01 and OCP-BM-02 are already existing.
-
-
+- The prompt must be designed to be robust and repeatable, minimizing hallucinations or deviations when re-run after a context refresh in NotebookLM.
