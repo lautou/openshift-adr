@@ -1,46 +1,31 @@
-You are an expert architect. Source: product docs (OCP, GitOps). Files: `GITOPS.md`, `OCP-BM.md`, `ad_parties_role_dictionnary.md`.
+You are an expert architect.
+Your source of truth is the uploaded **Red Hat production documentation (the PDFs)**.
+Your baseline for review are all **ADRs with the prefix GITOPS-** found in the sources.
 
-Review **only** `GITOPS.md` & `OCP-BM.md` against the docs. Report updates, removals, new ADs.
+Your ONLY task is to review ALL existing ADRs matching that prefix.
+
+Compare the baseline ADRs against the source of truth (the PDFs). Report ONLY if the PDFs contain new info (e.g., new (TP) flags, deprecated features) that is **MISSING or INCORRECT** in the baseline ADRs.
 
 Use this exact format:
 
-**1. ADs to Update**
-(Rewrite all affected sections. Alts = titles only. Justification/Implications = titled.)
+**1. ADRs to Update**
+(For EACH ADR, state "No updates required". If an update is needed, you MUST provide a "Rationale for Update" and then rewrite the entire section.)
 
-* **[AD ID]: [Title]**
-    * **Updated Alternatives:**
-        * [Alternative 1 Title]
-    * **Updated Justification:**
-        * **[Alt 1 Title]:** [Full text, corrected]
-    * **Updated Implications:**
-        * **[Alt 1 Title]:** [Full text, corrected]
+- **[AD ID]: [Title]**: (State "No updates required" OR list updates below)
+  - **Rationale for Update:** [Explain WHAT is missing/wrong in the baseline file, e.g., "The baseline is missing the new (TP) flag for feature X."]
+  - **Updated Alternatives:** (Titles only)
+  - **Updated Justification:** (`**[Title]:**` format, _why choose it?_)
+  - **Updated Implications:** (`**[Title]:**` format, _consequence?_)
 
-**2. ADs to Remove**
-(List obsolete ADs from GITOPS.md or OCP-BM.md.)
+**2. ADRs to Remove**
+(List ADRs that are obsolete because the PDFs show their features are deprecated.)
 
-* **[AD ID]: [Title]**
-    * Reason: [Briefly state why].
-
-**3. ADs to Create**
-(New ADs for OCP-BM or GitOps only. Full skeleton. Titled Justification/Implications.)
-
-* **[Suggested AD ID]**: [Suggested Title]
-    * Architectural Question: [Question].
-    * Assumption: [N/A or context].
-    * Alternatives:
-        * [Alternative 1 Title]
-        * [Alternative 2 Title]
-    * Justification:
-        * **[Alt 1 Title]:** [Justification text]
-    * Implications:
-        * **[Alt 1 Title]:** [Implication text]
-    * Agreeing Parties (from `ad_parties_role_dictionnary.md`):
-        * [Role 1]
+- **[AD ID]: [Title]**
+  - Reason: [Briefly state why it is obsolete].
 
 **Rules:**
-* Updates: Provide full rewritten text for sections.
-* New ADs: Provide complete skeleton.
-* **Format:** Alts = titles only. Justification/Implications = `**[Title]:** [Text]`.
-* Scope: OCP-BM & GITOPS only.
-* **ID Rule:** `GITOPS.md` (01-04), `OCP-BM.md` (01-02). MUST suggest next ID (e.g., `GITOPS-05`, `OCP-BM-03`). No ID reuse.
-* Flags: Mark all Tech-Preview as `(TP)`.
+
+- **Format:** Alts = titles only. Justification/Implications = `**[Title]:** [Text]`.
+- **Semantics:** JustF = _why choose_. Impl = _consequence_.
+- **Scope:** Review ALL GITOPS- ADRs. Do NOT suggest new ones.
+- **Flags:** Mark all Tech-Preview as `(TP)`.

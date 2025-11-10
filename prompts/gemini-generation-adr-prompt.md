@@ -1,106 +1,55 @@
-Here is a structured and refined version of your meta-prompt.
+You are Gemini, my helpful AI assistant.
 
-This "meta-prompt" is designed to be given to me (Gemini) to generate the final, optimized NotebookLM prompt you need. It logically organizes all your requirements, constraints, and specific instructions (like the update logic and formatting) into a clear, actionable request.
+I am a Red Hat Consulting Architect. My goal is to maintain an Architecture Decision Records (ADR) repository for my OCP designs using NotebookLM.
+
+We have already completed a long troubleshooting process and established a final, reliable workflow. I need you to regenerate the two (2) final, generic prompts we created, based on the key lessons we learned.
+
+**ADR Structure Reference (This is what I need in my files):**
+
+- **ID:** Unique, using a prefix (e.g., `GITOPS-01`).
+- **Title:** A concise title.
+- **Architectural Question:** The core question the ADR answers.
+- **Issue or Problem:** The problem statement.
+- **Assumption:** Context/conditions (can be `N/A`).
+- **Alternatives:** At least two options.
+- **Justification:** The "why choose it?" for each alternative.
+- **Implications:** The "consequence/risk" for each alternative.
+- **Decision:** ` #TODO: Document the decision for each cluster.#`
+- **Agreeing Parties:** A list of roles (e.g., `Person: #TODO#, Role: Enterprise Architect`).
+
+**Our Key Lessons (Please recall this context):**
+
+1.  **"Noisy" Notebooks Fail:** Uploading all 100+ PDF docs into one notebook with all `.md` files causes the AI to be "lazy" and fail to read the full content of the `.md` files.
+2.  **"Focused Notebooks" are the Solution:** The only reliable method is to create a separate, focused NotebookLM for each topic (e.g., a "GitOps Notebook" with only the GitOps PDF docs, the `GITOPS.md` file, and the two dictionary files).
+3.  **"All-in-One" Prompts Fail:** A single prompt for updating, removing, and creating is non-deterministic and produces "false positives" (reporting existing text as a new update).
+4.  **A Two-Prompt System is Required:** We must use two separate, generic prompts: one for `UPDATE/REMOVE` and one for `CREATE`.
 
 ---
-
-### **Refined Meta-Prompt for Gemini**
-
-**Attachments (Assume these are provided):**
-
-1.  `AD ID prefix dictionary` (Contains prefixes like OCP-BM, GITOPS, etc.)
-2.  `AD agreeing parties dictionary` (Contains roles like "Platform Engineering," "Security," etc.)
-3.  `GITOPS AD example` (The current AD file for GITOPS)
-4.  `OCP-BM AD example` (The current AD files for OCP-BM)
-
-**Your Role:** I am a Red Hat Consulting Architect.
-
-**My Goal:** I need to create and maintain an Architecture Decision (AD) repository for designing OCP / ODF / RHOAI. I use NotebookLM to manage this process.
 
 **My Task:**
-Generate a **single, repeatable prompt for NotebookLM** that I can use to review my existing ADs. The prompt must adhere to all constraints listed below.
 
-**Context (Uploaded in NotebookLM):**
+Please generate the two (2) generic, reusable NotebookLM prompts (each **under 2000 characters**) that we finalized.
 
-- Latest documentation PDFs for:
-  - OpenShift Container Platform (OCP)
-  - OpenShift Data Foundation (ODF)
-  - OpenShift Logging
-  - OpenShift GitOps
-  - OpenShift Pipelines
-  - Red Hat OpenShift AI Self-Managed (RHOAI)
-- The `AD ID prefix dictionary`
-- The `AD agreeing parties dictionary`
+**1. Generate the "UPDATE/REMOVE" Prompt (v30)**
+Generate the generic prompt for reviewing existing ADRs. This prompt must:
 
-**AD Structure Reference:**
+- Be a template that uses a `[PREFIX]` placeholder (e.g., `GITOPS-`).
+- Assume the user is in a "focused notebook."
+- Define the "PDFs" as the source of truth and the "ADRs with prefix [PREFIX]-" as the baseline.
+- Instruct the AI to find only `MISSING or INCORRECT` info.
+- **Crucially:** Require a `Rationale for Update:` field to prevent the "false positive" circular logic error.
+- Demand that any updated section be **rewritten in full**, not as a "delta chunk."
+- Follow our agreed-upon format (`**[Title]:**`, `Alts = titles only`, etc.).
 
-- **ID:** Unique, using a prefix from the dictionary (e.g., `OCP-BM-01`).
-- **Title:** A concise title.
-- **Issue:** The architectural question being addressed.
-- **Assumptions:** Context/conditions for the AD's relevance (e.g., "The environment is disconnected."). Must be present, even if `N/A`.
-- **Alternatives:** At least two or more options.
-- **Justification:** Rationale for each alternative.
-- **Implication:** Consequences of choosing each alternative.
-- **Agreeing Parties:** A list of roles from the dictionary.
+**2. Generate the "CREATE" Prompt (v31)**
+Generate the generic prompt for suggesting new ADRs. This prompt must:
+
+- Be a template that uses a `[PREFIX]` placeholder.
+- Instruct the AI to find the _next sequential ID_ for that prefix (by checking the existing ADRs).
+- Generate the _full skeleton_ for a new AD, based on the **ADR Structure Reference** provided above.
+- Reference the `ad_parties_role_dictionnary.md` and use the `Person: #TODO#, Role: [Role Name]` format.
+- Follow our agreed-upon format (`**[Title]:**`, `Alts = titles only`, etc.).
 
 ---
 
-### **Requirements for the Generated NotebookLM Prompt**
-
-Create a NotebookLM prompt that instructs it to perform the following analysis, respecting these strict rules:
-
-**1. Character Limit:**
-
-- The _entire_ generated prompt must be **under 2000 characters**.
-
-**2. Scope & Focus:**
-
-- **Only** analyze ADs with the prefixes **OCP-BM** and **GITOPS**, based on the provided example files.
-- Ignore all other AD prefixes (like ODF, RHOAI, etc.) for this analysis.
-
-**3. Core Task & Output Logic:**
-
-- You will review the provided `OCP-BM AD example` and `GITOPS AD example` files against the latest documentation in your sources.
-- For each AD, you must determine if it needs to be **Created**, **Updated**, or **Removed**.
-- Your output must be synthetic, showing _only_ the required changes.
-
-**4. Specific Logic for "Update":**
-
-- The provided AD examples contain _all_ sections (ID, Title, Issue, Assumptions, Alternatives, Justification, Implication, Agreeing Parties).
-- When an AD needs an **Update**, you must _only_ list the specific sections that require modification.
-- **Crucially:** If you review an existing AD (like `OCP-BM-01`) and find **no changes** are needed based on the latest docs, you MUST explicitly state:
-  `**OCP-BM-01: [Title]**`
-  `* No updates required.`
-- Do NOT reprint the AD's existing content if no update is needed.
-
-**5. Specific Logic for "Create":**
-
-- If new features or changes in the source documents warrant a **new** AD, generate it.
-- New AD IDs must use a two-digit format (e.g., `OCP-BM-XX` or `GITOPS-XX`). Do not use three-digit IDs.
-- You must generate _all_ required fields: ID, Title, Issue, Assumptions (use `N/A` if none), Alternatives (at least 2), Justification (for each), Implication (for each), and Agreeing Parties (from the dictionary).
-
-**6. Specific Logic for "Remove":**
-
-- If an AD is obsolete (e.g., based on a deprecated feature), recommend its **Removal**.
-- State the reason clearly:
-  `**[AD ID]: [Title]**`
-  `* Action: Remove`
-  `* Reason: [Briefly explain why, e.g., "Feature is deprecated in OCP X.X"]`
-
-**7. Content & Accuracy:**
-
-- Ensure no ADs mention or recommend deprecated features (unless marking for removal).
-- Any feature identified as "Technology Preview" in the sources must be explicitly flagged with **(TP)** in the AD text if it is not already.
-
-**8. Formatting Requirements:**
-
-- Strictly follow this format for all fields: `**[Field Name]:** [Text]`.
-  - Example: `**Assumptions:** The environment is disconnected.`
-- When listing alternatives, justifications, etc., use bullet points.
-- **Inject a blank line between bullet list items** to ensure clear, readable formatting in the output.
-- Keep the AD ID and Title intact and together (e.g., `**OCP-BM-02: Title of AD**`) when reporting updates.
-- Do not mix content from different ADs.
-
-**9. Repeatability:**
-
-- The prompt must be designed to be robust and repeatable, minimizing hallucinations or deviations when re-run after a context refresh in NotebookLM.
+Please provide these two generic prompts so I can save them as my final, repeatable workflow.

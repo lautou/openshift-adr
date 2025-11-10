@@ -1,6 +1,9 @@
-# OpenShift Container Platform on Bare Metal
+# ARCHITECTURE DECISION RECORDS FOR: OpenShift Container Platform - Specifics of baremetal installation
 
-## OCP-BM-01: OCP installation method on baremetal infrastructure
+## OCP-BM-01
+
+**Title**
+OCP installation method on baremetal infrastructure
 
 **Architectural Question**
 Which OCP installation method will be used to deploy a cluster on baremetal infrastructure?
@@ -43,7 +46,10 @@ N/A
 
 ---
 
-## OCP-BM-02: Bare Metal Node Remediation
+## OCP-BM-02
+
+**Title**
+Bare Metal Node Remediation
 
 **Architectural Question**
 What is the strategy for automatically remediating unhealthy Bare Metal nodes?
