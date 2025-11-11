@@ -86,6 +86,47 @@ OpenShift Pipelines will be deployed.
 ## PIPELINES-03
 
 **Title**
+Limiting Aggregate Compute Resource Consumption
+
+**Architectural Question**
+How should aggregate compute resource consumption (CPU, memory) for all pipeline-generated pods be enforced if direct pipeline resource quotas are unavailable?
+
+**Issue or Problem**
+OpenShift Pipelines does not enable directly specifying the compute resource quota for a pipeline, potentially leading to unbounded resource use if only default limits (BestEffort) are set
+
+**Assumption**
+Performance must be maintained by limiting the total simultaneous compute resources consumed by CI/CD execution pods.
+
+**Alternatives**
+
+- Enforce Explicit Resource Requests/Limits on all Tasks/Steps
+- Use PriorityClass and ResourceQuota
+
+**Decision**
+#TODO: Document the decision.#
+
+**Justification**
+
+- **Enforce Explicit Resource Requests/Limits on all Tasks/Steps:** Provides precise, granular control over resources consumed by each container.
+- **Use PriorityClass and ResourceQuota:** Allows defining an aggregate hard quota (CPU, memory, pods) applied specifically to pipeline workloads identified by a designated `PriorityClass`, providing cluster-wide resource control over pipeline consumption..
+
+**Implications**
+
+- **Enforce Explicit Resource Requests/Limits on all Tasks/Steps:** Increases complexity and administrative burden; requires careful planning and definition for every step in every task.
+- **Use PriorityClass and ResourceQuota:** Requires pre-defining a `PriorityClass` object and configuring a `ResourceQuota` with a `scopeSelector` matching that class. If requests/limits are missing on the pods, a compensating LimitRange might be necessary.
+
+**Agreeing Parties**
+
+- Person: #TODO#, Role: Enterprise Architect
+- Person: #TODO#, Role: Infra Leader
+- Person: #TODO#, Role: OCP Platform Owner
+- Person: #TODO#, Role: Operation Expert
+
+---
+
+## PIPELINES-04
+
+**Title**
 Pipeline Triggering Mechanism
 
 **Architectural Question**
@@ -126,7 +167,7 @@ OpenShift Pipelines (Tekton) will be used for CI/CD automation.
 
 ---
 
-## PIPELINES-04
+## PIPELINES-05
 
 **Title**
 Pipelines as Code (PaC) Adoption Strategy
@@ -166,7 +207,7 @@ OpenShift Pipelines will be deployed.
 
 ---
 
-## PIPELINES-05
+## PIPELINES-06
 
 **Title**
 What mechanism should be adopted to pause CI/CD workflows pending explicit human approval?
@@ -204,45 +245,6 @@ A formal approval step is mandatory in high-risk delivery paths (e.g., promotion
 - Person: #TODO#, Role: Operations Expert
 
 ---
-
-## PIPELINES-06
-
-**Title**
-Pipeline Run and Task Run Pruning Strategy
-
-**Architectural Question**
-What strategy should be implemented for the automatic pruning of stale PipelineRun and TaskRun objects to conserve cluster resources?
-
-**Issue or Problem**
-Completed TaskRun and PipelineRun objects occupy physical resources, and automated cleanup is required for optimal resource utilization.
-
-**Assumption**
-Automated cleanup based on completion time or count retention limits must be globally configured.
-
-**Alternatives**
-
-- Job-based Pruner (Default)
-- Event-based Pruner (TP)
-
-**Decision**
-#TODO: Document the decision.#
-
-**Justification**
-
-- **Job-based Pruner (Default):** Provides periodic cleanup based on a configurable schedule (`schedule`) and retention policies (keep or keep-since).
-- **Event-based Pruner (TP):** Prunes resources in near real time by listening for resource events, potentially offering faster cleanup compared to periodic jobs
-
-**Implications**
-
-- **Job-based Pruner (Default):** Runs periodically, meaning resource consumption might lag behind completion times
-- **Event-based Pruner (TP):** This feature is Technology Preview (TP) and not recommended for production. Enabling this requires disabling the default job-based pruner in the TektonConfig CR.
-
-**Agreeing Parties**
-
-- Person: #TODO#, Role: Enterprise Architect
-- Person: #TODO#, Role: Storage Expert
-- Person: #TODO#, Role: OCP Platform Owner
-- Person: #TODO#, Role: Operations Expert
 
 ## PIPELINES-07
 
@@ -283,41 +285,43 @@ RHEL entitlements are managed by the Insight Operator and available as the `etc-
 - Person: #TODO#, Role: OCP Platform Owner
 - Person: #TODO#, Role: Security Expert
 
+---
+
 ## PIPELINES-08
 
 **Title**
-Limiting Aggregate Compute Resource Consumption
+Pipeline Run and Task Run Pruning Strategy
 
 **Architectural Question**
-How should aggregate compute resource consumption (CPU, memory) for all pipeline-generated pods be enforced if direct pipeline resource quotas are unavailable?
+What strategy should be implemented for the automatic pruning of stale PipelineRun and TaskRun objects to conserve cluster resources?
 
 **Issue or Problem**
-OpenShift Pipelines does not enable directly specifying the compute resource quota for a pipeline, potentially leading to unbounded resource use if only default limits (BestEffort) are set
+Completed TaskRun and PipelineRun objects occupy physical resources, and automated cleanup is required for optimal resource utilization.
 
 **Assumption**
-Performance must be maintained by limiting the total simultaneous compute resources consumed by CI/CD execution pods.
+Automated cleanup based on completion time or count retention limits must be globally configured.
 
 **Alternatives**
 
-- Enforce Explicit Resource Requests/Limits on all Tasks/Steps
-- Use PriorityClass and ResourceQuota
+- Job-based Pruner (Default)
+- Event-based Pruner (TP)
 
 **Decision**
 #TODO: Document the decision.#
 
 **Justification**
 
-- **Enforce Explicit Resource Requests/Limits on all Tasks/Steps:** Provides precise, granular control over resources consumed by each container.
-- **Use PriorityClass and ResourceQuota:** Allows defining an aggregate hard quota (CPU, memory, pods) applied specifically to pipeline workloads identified by a designated `PriorityClass`, providing cluster-wide resource control over pipeline consumption..
+- **Job-based Pruner (Default):** Provides periodic cleanup based on a configurable schedule (`schedule`) and retention policies (keep or keep-since).
+- **Event-based Pruner (TP):** Prunes resources in near real time by listening for resource events, potentially offering faster cleanup compared to periodic jobs
 
 **Implications**
 
-- **Enforce Explicit Resource Requests/Limits on all Tasks/Steps:** Increases complexity and administrative burden; requires careful planning and definition for every step in every task.
-- **Use PriorityClass and ResourceQuota:** Requires pre-defining a `PriorityClass` object and configuring a `ResourceQuota` with a `scopeSelector` matching that class. If requests/limits are missing on the pods, a compensating LimitRange might be necessary.
+- **Job-based Pruner (Default):** Runs periodically, meaning resource consumption might lag behind completion times
+- **Event-based Pruner (TP):** This feature is Technology Preview (TP) and not recommended for production. Enabling this requires disabling the default job-based pruner in the TektonConfig CR.
 
 **Agreeing Parties**
 
 - Person: #TODO#, Role: Enterprise Architect
-- Person: #TODO#, Role: Infra Leader
+- Person: #TODO#, Role: Storage Expert
 - Person: #TODO#, Role: OCP Platform Owner
-- Person: #TODO#, Role: Operation Expert
+- Person: #TODO#, Role: Operations Expert

@@ -123,7 +123,7 @@ A GitOps operational model will be used.
 
 --
 
-## GITOPS-07
+## GITOPS-04
 
 **Title**
 Multi-tenancy Application/ApplicationSet Placement Strategy
