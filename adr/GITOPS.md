@@ -225,7 +225,7 @@ OpenShift SSO (Dex) is the primary method for human user authentication. Dedicat
 **Justification**
 
 - **Local User Management (via Argo CD CR):** Provides **built-in support for managing local users** intended for automation scenarios that require API tokens. Allows declarative definition of users, automatic token generation/renewal, configuration of token lifetimes, and secure storage in Kubernetes secrets. This simplifies creating API tokens for automation tasks compared to relying solely on external SSO systems.
-- **SSO Integration (Automated Token Generation via external means):** Relies on potentially more complex external systems (e.g., Vault or custom logic interacting with OIDC) to mint tokens, but aligns identity management with existing corporate security policies (N/A: Not supported natively in Argo CD CR for automation users).
+- **SSO Integration (Automated Token Generation via external means):** Relies on potentially more complex external systems (e.g., Vault or custom logic interacting with OIDC) to mint tokens, but aligns identity management with existing corporate security policies (N/A: Not supported natively in Argo CD CR for automation users). The removal of support for Keycloak-based authentication (as of GitOps 1.18) mandates migration to Dex or a self-managed Red Hat Build of Keycloak (RHBK) instance for external identity providers if SSO is required.
 
 **Implications**
 
