@@ -6,6 +6,9 @@ This file maps workshop topics and products to their official Architecture Decis
 | ------------------------------------------------------------------- | ------------ |
 | OCP General architecture aspects                                    | OCP-BASE     |
 | OCP on baremetal infrastructure platform and installation specifics | OCP-BM       |
+| OCP with Hosted Control Planes general aspects                      | OCP-HCP      |
+| OCP with Hosted Control Planes baremetal specifics aspects          | OCP-HCP-BM   |
+| OCP with Hosted Control Planes OpenStack specifics aspects          | OCP-HCP-OSP  |
 | OCP on OpenStack infrastructure platform and installation specifics | OCP-OSP      |
 | OCP Networking                                                      | OCP-NET      |
 | OCP Storage (Native)                                                | OCP-STOR     |
