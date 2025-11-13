@@ -26,4 +26,5 @@ This file maps workshop topics and products to their official Architecture Decis
 | NVIDIA GPU Operator                                                 | NVIDIA-GPU   |
 | OpenShift Pipelines                                                 | PIPELINES    |
 | OpenShift GitOps                                                    | GITOPS       |
+| OpenShift Service Mesh                                              | OSSM         |
 | Red Hat OpenShift AI Self Managed                                   | RHOAI-SM     |
