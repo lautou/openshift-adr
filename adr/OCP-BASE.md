@@ -1,6 +1,9 @@
 # OpenShift Container Platform High-Level Strategy
 
-## OCP-BASE-01: Cluster Isolation Strategy
+## OCP-BASE-01
+
+**Title**
+Cluster Isolation Strategy
 
 **Architectural Question**
 How will workloads for different lifecycle stages (e.g., Dev, Test, Prod) be separated and hosted across OpenShift clusters?
@@ -41,7 +44,10 @@ N/A
 
 ---
 
-## OCP-BASE-02: Cloud model
+## OCP-BASE-02
+
+**Title**
+Cloud model
 
 **Architectural Question**
 Which cloud operating model will be adopted for the OpenShift platform?
@@ -82,7 +88,12 @@ N/A
 
 ---
 
-## OCP-BASE-03: Platform infrastructure
+## OCP-BASE-03
+
+**Title**
+Platform infrastructure
+
+**Status: [MANUAL REVIEW REQUIRED]** _(Installation mode tables are not decoded properly by NotebookLM)_
 
 **Architectural Question**
 On which specific infrastructure platform(s) will OpenShift Container Platform be installed?
@@ -96,23 +107,23 @@ N/A
 **Alternatives**
 
 - Public Cloud Managed (ROSA/ARO/OSD)
-- Self-Managed Public Cloud (AWS, Azure, GCP, OCI)
-- Bare Metal / On-Premise Virtualized (vSphere, OpenStack, Bare Metal)
+- Self-Managed Public Cloud (AWS, Azure, GCP, OCI, IBM Cloud, Azure Stack Hub, ALIBABA Cloud)
+- Bare Metal / On-Premise Virtualized (vSphere, RHOSP, Bare Metal, Nutanix, IBM Power, IBM Z/LinuxONE, External/None)
 
 **Decision**
 #TODO: Document the decision for each cluster.#
 
 **Justification**
 
-- **Public Cloud Managed (ROSA/ARO/OSD):** Leverages fully automated installation and relies on Red Hat and/or the cloud vendor for control plane management. Simplifies Day 2 operations but limits customization.
-- **Self-Managed Public Cloud (AWS, Azure, GCP, OCI):** Allows for Installer-Provisioned Infrastructure (IPI) for maximum integration with cloud services (Load Balancers, Storage) or User-Provisioned Infrastructure (UPI) for flexibility.
-- **Bare Metal / On-Premise Virtualized (vSphere, OpenStack, Bare Metal):** Provides full hardware control and optimization potential. Requires use of UPI, Assisted Installer, or Agent-based Installer (ABI), relying on internal virtualization or hardware expertise.
+- **Public Cloud Managed (ROSA/ARO/OSD):** To leverage fully automated installation and rely on Red Hat and/or the cloud vendor for control plane management. Simplifies Day 2 operations but limits customization.
+- **Self-Managed Public Cloud (AWS, Azure, GCP, OCI, IBM Cloud, Azure Stack Hub, ALIBABA Cloud):** Supports Installer-Provisioned Infrastructure (IPI) on platforms including AWS, Azure, GCP, Azure Stack Hub, and IBM Cloud Classic/VPC. User-Provisioned Infrastructure (UPI) maximizes flexibility and is supported on AWS, Azure, GCP, OCI, Azure Stack Hub, and ALIBABA Cloud. The Assisted Installer (AI) is supported for OCI. The Agent-based Installer (ABI) is supported for OCI.
+- **Bare Metal / On-Premise Virtualized (vSphere, RHOSP, Bare Metal, Nutanix, IBM Power, IBM Z/LinuxONE, External/None):** Provides full hardware control. Supported IPI options include vSphere, RHOSP, Bare Metal, and Nutanix. UPI is supported on platforms including vSphere, RHOSP, Bare Metal, IBM Power®, IBM Z®/IBM® LinuxONE, and External/None. Assisted Installer (AI) is supported on vSphere, Bare Metal, Nutanix, IBM Power®, IBM Z®, External, and None. Agent-based Installer (ABI) is supported on Bare Metal, vSphere, IBM Power®, IBM Z®, External, and None.
 
 **Implications**
 
 - **Public Cloud Managed (ROSA/ARO/OSD):** Reduces administrative overhead for underlying infrastructure components. Installation methods are limited to the managed service offering.
-- **Self-Managed Public Cloud (AWS, Azure, GCP, OCI):** IPI mode abstracts infrastructure management via the Machine API, simplifying cluster scaling and node lifecycle. Requires cloud credentials and IAM setup.
-- **Bare Metal / On-Premise Virtualized (vSphere, OpenStack, Bare Metal):** Requires cluster administrators to manually manage or pre-provision all underlying infrastructure components (networking, storage, VMs/hosts).
+- **Self-Managed Public Cloud (AWS, Azure, GCP, OCI, IBM Cloud, Azure Stack Hub, ALIBABA Cloud):** IPI mode (on AWS, Azure, GCP, IBM Cloud, etc.) abstracts infrastructure management via the Machine API, simplifying cluster scaling and node lifecycle. Requires cloud credentials and IAM setup. UPI (on AWS, Azure, GCP, OCI, etc.) requires manual management of underlying resources and does not support the Machine API post-installation.
+- **Bare Metal / On-Premise Virtualized (vSphere, RHOSP, Bare Metal, Nutanix, IBM Power, IBM Z/LinuxONE, External/None):** For User-Provisioned Infrastructure (UPI) deployment, administrators must manually manage all underlying infrastructure components. IPI (on vSphere, RHOSP, Nutanix, Bare Metal) and Assisted/Agent Installer (on Bare Metal, vSphere, Nutanix, etc.) automate provisioning of infrastructure. For Bare Metal IPI, core infrastructure resources (networking, load balancing, storage, bootstrap machine) must be provided by the user.
 
 **Agreeing Parties**
 
@@ -124,7 +135,10 @@ N/A
 
 ---
 
-## OCP-BASE-04: Cluster Topology
+## OCP-BASE-04
+
+**Title**
+Cluster Topology
 
 **Architectural Question**
 What OpenShift topology should be deployed based on resource availability, HA requirements, and scale for each cluster?
@@ -166,7 +180,10 @@ N/A
 
 ---
 
-## OCP-BASE-05: Disaster recovery site strategy
+## OCP-BASE-05
+
+**Title**
+Disaster recovery site strategy
 
 **Architectural Question**
 What strategy will be adopted to ensure platform and application availability in the event of a complete site failure, considering the chosen cluster topology?
@@ -206,7 +223,10 @@ An on-premises deployment across multiple physical sites is planned or considere
 
 ---
 
-## OCP-BASE-06: Intra-Site Availability Zone / Failure Domain Strategy
+## OCP-BASE-06
+
+**Title**
+Intra-Site Availability Zone / Failure Domain Strategy
 
 **Architectural Question**
 Within a single site or region, how will OpenShift cluster nodes (Control Plane, Compute) be distributed across available Availability Zones (AZs) or Failure Domains (FDs) for high availability?
@@ -246,7 +266,10 @@ N/A
 
 ---
 
-## OCP-BASE-07: Network Connectivity Model
+## OCP-BASE-07
+
+**Title**
+Network Connectivity Model
 
 **Architectural Question**
 Will the OpenShift cluster be deployed in an environment with direct internet access or a highly restricted (air-gapped) network?
@@ -285,7 +308,10 @@ N/A
 
 ---
 
-## OCP-BASE-08: Mirrored images registry (Disconnected Environments)
+## OCP-BASE-08
+
+**Title**
+Mirrored images registry (Disconnected Environments)
 
 **Architectural Question**
 In a disconnected environment, which mirrored images registry solution will be used to provide required container images to the cluster?
@@ -324,7 +350,10 @@ Environment is disconnected (as decided in OCP-BASE-07).
 
 ---
 
-## OCP-BASE-09: Platform Installation and Upgrade Automation Strategy
+## OCP-BASE-09
+
+**Title**
+Platform Installation and Upgrade Automation Strategy
 
 **Architectural Question**
 What strategy or tooling will be used for automating the installation and ongoing upgrades of OpenShift Container Platform clusters?
@@ -365,7 +394,10 @@ N/A
 
 ---
 
-## OCP-BASE-10: Cluster Sizing Strategy
+## OCP-BASE-10
+
+**Title**
+Cluster Sizing Strategy
 
 **Architectural Question**
 What is the methodology for determining the required size (node count, CPU, RAM, GPU types/counts, storage capacity) for control plane, infrastructure, and worker nodes for each OpenShift cluster?
