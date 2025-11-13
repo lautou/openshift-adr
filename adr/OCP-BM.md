@@ -20,23 +20,26 @@ N/A
 - Installer-Provisioned Infrastructure (IPI)
 - Agent-based Installer (ABI)
 - Assisted Installer
+- Image-based Installer (IBI)
 
 **Decision**
 #TODO: Document the decision for the Bare Metal cluster.#
 
 **Justification**
 
-- **User-Provisioned Infrastructure (UPI):** Requires the user to manually configure and manage networking, DNS, load balancers, and provisioning of RHCOS onto bare metal hosts prior to installation.
-- **Installer-Provisioned Infrastructure (IPI):** Automates host provisioning and networking by leveraging Bare Metal Operator (BMO) features, suitable if metal resources are fully automated via BMO.
-- **Agent-based Installer (ABI):** Uses discovery ISOs and a lightweight agent to gather hardware information, simplifying installation for both connected and disconnected bare metal environments.
-- **Assisted Installer:** A web-based SaaS service designed to generate installation artifacts and manage the installation process, offering a simplified user experience for bare metal deployments.
+- **User-Provisioned Infrastructure (UPI):** Requires the user to manually provision and configure all cluster infrastructure (including networking, DNS, load balancers, and storage) and install Red Hat Enterprise Linux CoreOS (RHCOS) on hosts using generated Ignition configuration files. This approach offers **maximum customizability**.
+- **Installer-Provisioned Infrastructure (IPI):** Delegates the infrastructure bootstrapping and provisioning to the installation program. For bare metal, this process automates provisioning using the host’s Baseboard Management Controller (BMC) by leveraging the Bare Metal Operator (BMO) features.
+- **Agent-based Installer (ABI):** Provides the convenience of the Assisted Installer but enables installation **locally for disconnected environments or restricted networks**. It uses a lightweight agent booted from a discovery ISO to facilitate provisioning.
+- **Assisted Installer:** A web-based SaaS service designed for **connected networks** that simplifies deployment by providing a user-friendly interface, smart defaults, and pre-flight validations, generating a discovery image for the bare metal installation.
+- **Image-based Installer (IBI):** Significantly reduces the deployment time of single-node OpenShift clusters by enabling the preinstallation of configured and validated instances on target hosts, supporting rapid reconfiguration and deployment even in disconnected environments.
 
 **Implications**
 
-- **User-Provisioned Infrastructure (UPI):** Highest operational overhead and responsibility for day 1/2 operations.
-- **Installer-Provisioned Infrastructure (IPI):** Requires integration with BMO and related provisioning infrastructure. Allows use of Machine API for lifecycle management.
-- **Agent-based Installer (ABI):** Highly flexible for restricted networks and provides integrated tools for configuring nodes (e.g., LVM storage configuration).
-- **Assisted Installer:** Requires a working internet connection during the preparation phase (unless run disconnected). Simplifies deployment by handling Ignition configuration generation.
+- **User-Provisioned Infrastructure (UPI):** Implies the **highest operational overhead** because the user must manage and maintain all infrastructure resources (Load Balancers, Networking, Storage) throughout the cluster lifecycle. It requires additional validation and configuration to use the Machine API capabilities.
+- **Installer-Provisioned Infrastructure (IPI):** Requires integration with the BMO and related provisioning infrastructure. For bare metal IPI, the user must provide all cluster infrastructure resources, including the bootstrap machine, networking, load balancing, storage, and individual cluster machines. Once installed, it allows OpenShift Container Platform to manage the operating system and supports using the Machine API for node lifecycle management.
+- **Agent-based Installer (ABI):** Ideal for **disconnected environments** and provides features like integrated tools for configuring nodes (e.g., disk encryption or LVM storage configuration). Requires the user to provide all cluster infrastructure and resources (networking, load balancing, storage).
+- **Assisted Installer:** Requires a working internet connection during the preparation phase (unless steps are followed for a disconnected approach). It simplifies deployment by handling Ignition configuration generation and supports **full integration for bare metal platforms**.
+- **Image-based Installer (IBI):** Primarily intended for **Single-Node OpenShift (SNO) cluster deployments**, often managed using a hub-and-spoke architecture via Red Hat Advanced Cluster Management (RHACM) and the multicluster engine for Kubernetes Operator (MCE).
 
   **Agreeing Parties**
 
