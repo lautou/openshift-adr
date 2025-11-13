@@ -6,9 +6,70 @@ from pathlib import Path
 
 # --- Configuration (Relative to project root) ---
 ADR_DIRECTORY = "adr"
-PROMPT_DIRECTORY = "prompts"
-PROMPT_TEMPLATE_FILENAME = "template-adr-update-load.md"
 CHAR_LIMIT = 1950  # A safe buffer below 2000
+
+# --- Prompt "Wrapper" Text (Internalized) ---
+# We estimate the wrapper text adds ~150 chars.
+WRAPPER_ESTIMATE = 150 
+SAFE_CHUNK_LIMIT = CHAR_LIMIT - WRAPPER_ESTIMATE # Max size for the *content*
+
+PROMPT_SINGLE = """
+Please read and remember the following Architecture Decision text. Just confirm you have read it.
+---
+{ADR_FULL_TEXT}
+---
+"""
+
+PROMPT_MULTI_START = """
+Please read and remember the following text. It is **Part 1/{total}** of a single Architecture Decision.
+I will send the other parts next. Just confirm you have read this part.
+---
+{ADR_FULL_TEXT}
+---
+"""
+
+PROMPT_MULTI_PART = """
+Here is **Part {part_num}/{total}** of the Architecture Decision. Please read it and confirm.
+---
+{ADR_FULL_TEXT}
+---
+"""
+
+PROMPT_MULTI_END = """
+Here is the **final Part {part_num}/{total}** of the Architecture Decision. Please read it and confirm.
+---
+{ADR_FULL_TEXT}
+---
+"""
+
+def split_text_into_chunks(text, max_length):
+    """
+    Splits a large text into smaller chunks under max_length,
+    respecting line breaks.
+    """
+    chunks = []
+    current_chunk_lines = []
+    current_chunk_char_count = 0
+    
+    for line in text.split('\n'):
+        line_len = len(line) + 1  # +1 for the newline char
+
+        if (current_chunk_char_count + line_len > max_length) and current_chunk_lines:
+            # Current line won't fit, so finalize the previous chunk
+            chunks.append('\n'.join(current_chunk_lines))
+            # Start a new chunk with the current line
+            current_chunk_lines = [line]
+            current_chunk_char_count = line_len
+        else:
+            # Add the line to the current chunk
+            current_chunk_lines.append(line)
+            current_chunk_char_count += line_len
+            
+    # Add the last remaining chunk
+    if current_chunk_lines:
+        chunks.append('\n'.join(current_chunk_lines))
+        
+    return chunks
 
 def main():
     # --- Path Setup ---
@@ -16,11 +77,9 @@ def main():
         script_path = Path(__file__).resolve()
         project_root = script_path.parent.parent
     except NameError:
-        # Fallback for environments where __file__ is not defined
         project_root = Path.cwd()
 
     adr_dir = project_root / ADR_DIRECTORY
-    prompt_dir = project_root / PROMPT_DIRECTORY
 
     # --- Argument Parsing ---
     parser = argparse.ArgumentParser(
@@ -29,8 +88,8 @@ def main():
         epilog="""
 Example usage (run from project root '~/workspace/adr'):
   ./scripts/prepare_prompt.py OCP-BM
-  (This finds 'prompts/template-adr-update-load.md', 'adr/OCP-BM.md', 
-   and generates one 'LOAD' prompt for EACH ADR found.)
+  (This finds 'adr/OCP-BM.md', searches for 'OCP-BM-' prefixes,
+   and generates one or more 'LOAD' prompts for EACH ADR found.)
 """
     )
     parser.add_argument(
@@ -46,7 +105,6 @@ Example usage (run from project root '~/workspace/adr'):
     prefix_for_regex = f"{prefix_base}-"
     
     filename_path = adr_dir / filename_str
-    prompt_template_path = prompt_dir / PROMPT_TEMPLATE_FILENAME
 
     # --- Read ADR File ---
     if not filename_path.exists():
@@ -58,18 +116,7 @@ Example usage (run from project root '~/workspace/adr'):
         print(f"Error: Could not read file {filename_path}: {e}", file=sys.stderr)
         sys.exit(1)
 
-    # --- Read Prompt Template File ---
-    if not prompt_template_path.exists():
-        print(f"Error: Prompt template not found at '{prompt_template_path}'", file=sys.stderr)
-        sys.exit(1)
-    try:
-        prompt_template_content = prompt_template_path.read_text()
-    except Exception as e:
-        print(f"Error: Could not read file {prompt_template_path}: {e}", file=sys.stderr)
-        sys.exit(1)
-
-    # --- **BUG 1 FIX**: Use finditer to slice, not split ---
-    # This pattern finds the *start* of each ADR block
+    # --- Regex Logic to split file into ADRs ---
     pattern = re.compile(
         r"^\#\#\s*{prefix}\S+".format(prefix=re.escape(prefix_for_regex)),
         re.MULTILINE | re.IGNORECASE
@@ -87,41 +134,47 @@ Example usage (run from project root '~/workspace/adr'):
     for i, current_match in enumerate(matches):
         start_index = current_match.start()
         
-        # Find the end index (start of next ADR or end of file)
         end_index = len(adr_content)
         if i + 1 < len(matches):
             end_index = matches[i + 1].start()
             
-        # Slice the full ADR text block
         adr_full_text_raw = adr_content[start_index:end_index]
-        
-        # **BUG 2 FIX**: Clean the sliced block by splitting on the "---" separator
-        # and taking the first part.
         adr_text_cleaned = adr_full_text_raw.split("\n---\n")[0].strip()
         
-        # Get the ID for the warning/end marker
         ad_id_match = re.search(r"^\#\#\s*(\S+)", adr_text_cleaned)
         ad_id = ad_id_match.group(1) if ad_id_match else "UNKNOWN_ADR"
 
-        # Fill the template
-        final_prompt = prompt_template_content.format(ADR_FULL_TEXT=adr_text_cleaned)
-        prompt_len = len(final_prompt)
-
-        # --- Print Warning (if over limit) ---
-        if prompt_len > CHAR_LIMIT:
-            print(
-                f"# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n"
-                f"# WARNING: ADR '{ad_id}' IS TOO LONG ({prompt_len} characters).\n"
-                f"# The 2000-char limit will be exceeded. You must review this ADR\n"
-                f"# manually using the 'Abridged Review (v25)' prompt.\n"
-                f"# !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!\n\n"
-            )
-        else:
-            # --- **REQUEST 2 FIX**: Add the START marker ---
-            print(f"# --- START OF PROMPT FOR {ad_id} ---")
-            # Print the ready-to-use prompt
+        # --- Check Length and Generate Prompt(s) ---
+        if len(adr_text_cleaned) + WRAPPER_ESTIMATE <= CHAR_LIMIT:
+            # It fits in one prompt
+            final_prompt = PROMPT_SINGLE.format(ADR_FULL_TEXT=adr_text_cleaned)
+            print(f"# --- START OF PROMPT FOR {ad_id} (1 part) ---")
             print(final_prompt.strip())
             print(f"# --- END OF PROMPT FOR {ad_id} ---\n# (Copy the text above, paste in NotebookLM, then use 'prompts/adr-update-review.md')\n")
+        
+        else:
+            # It's too long, split it
+            print(f"# --- NOTE: ADR '{ad_id}' IS TOO LONG. SPLITTING INTO MULTIPLE PROMPTS... ---")
+            chunks = split_text_into_chunks(adr_text_cleaned, SAFE_CHUNK_LIMIT)
+            total_chunks = len(chunks)
+            
+            for part_num, chunk_content in enumerate(chunks, 1):
+                if part_num == 1:
+                    final_prompt = PROMPT_MULTI_START.format(total=total_chunks, ADR_FULL_TEXT=chunk_content)
+                elif part_num == total_chunks:
+                    final_prompt = PROMPT_MULTI_END.format(part_num=part_num, total=total_chunks, ADR_FULL_TEXT=chunk_content)
+                else:
+                    final_prompt = PROMPT_MULTI_PART.format(part_num=part_num, total=total_chunks, ADR_FULL_TEXT=chunk_content)
+                
+                # Check length of the *chunked* prompt
+                if len(final_prompt) > CHAR_LIMIT:
+                     print(f"# !!!!!!!!! WARNING: CHUNK {part_num}/{total_chunks} FOR {ad_id} IS STILL TOO LONG. MANUAL REVIEW NEEDED. !!!!!!!!!")
+                
+                print(f"# --- START OF PROMPT FOR {ad_id} (Part {part_num}/{total_chunks}) ---")
+                print(final_prompt.strip())
+                print(f"# --- END OF PROMPT FOR {ad_id} (Part {part_num}/{total_chunks}) ---")
+
+            print(f"# --- ALL PARTS FOR {ad_id} GENERATED. ---\n# (Copy/paste ALL parts in order, THEN use 'prompts/adr-update-review.md')\n")
 
 if __name__ == "__main__":
     main()
