@@ -6,15 +6,17 @@ from pathlib import Path
 
 # --- Configuration (Relative to project root) ---
 ADR_DIRECTORY = "adr"
+PROMPT_DIRECTORY = "prompts"
 CHAR_LIMIT = 1950  # A safe buffer below 2000
 
-# --- Prompt "Wrapper" Text (Internalized) ---
+# --- **FIX 2**: Updated Prompt "Wrapper" Text (Internalized and Silent) ---
 # We estimate the wrapper text adds ~150 chars.
 WRAPPER_ESTIMATE = 150 
 SAFE_CHUNK_LIMIT = CHAR_LIMIT - WRAPPER_ESTIMATE # Max size for the *content*
 
 PROMPT_SINGLE = """
-Please read and remember the following Architecture Decision text. Just confirm you have read it.
+Please read and remember the following Architecture Decision Record text.
+**Respond ONLY with "Confirmed. ADR loaded."**
 ---
 {ADR_FULL_TEXT}
 ---
@@ -22,21 +24,23 @@ Please read and remember the following Architecture Decision text. Just confirm 
 
 PROMPT_MULTI_START = """
 Please read and remember the following text. It is **Part 1/{total}** of a single Architecture Decision.
-I will send the other parts next. Just confirm you have read this part.
+**Respond ONLY with "Confirmed. Ready for Part 2."**
 ---
 {ADR_FULL_TEXT}
 ---
 """
 
 PROMPT_MULTI_PART = """
-Here is **Part {part_num}/{total}** of the Architecture Decision. Please read it and confirm.
+Here is **Part {part_num}/{total}** of the Architecture Decision. Please read it.
+**Respond ONLY with "Confirmed. Ready for Part {next_part}."**
 ---
 {ADR_FULL_TEXT}
 ---
 """
 
 PROMPT_MULTI_END = """
-Here is the **final Part {part_num}/{total}** of the Architecture Decision. Please read it and confirm.
+Here is the **final Part {part_num}/{total}** of the Architecture Decision. Please read it.
+**Respond ONLY with "Confirmed. ADR loaded."**
 ---
 {ADR_FULL_TEXT}
 ---
@@ -55,17 +59,13 @@ def split_text_into_chunks(text, max_length):
         line_len = len(line) + 1  # +1 for the newline char
 
         if (current_chunk_char_count + line_len > max_length) and current_chunk_lines:
-            # Current line won't fit, so finalize the previous chunk
             chunks.append('\n'.join(current_chunk_lines))
-            # Start a new chunk with the current line
             current_chunk_lines = [line]
             current_chunk_char_count = line_len
         else:
-            # Add the line to the current chunk
             current_chunk_lines.append(line)
             current_chunk_char_count += line_len
             
-    # Add the last remaining chunk
     if current_chunk_lines:
         chunks.append('\n'.join(current_chunk_lines))
         
@@ -80,6 +80,7 @@ def main():
         project_root = Path.cwd()
 
     adr_dir = project_root / ADR_DIRECTORY
+    prompt_dir = project_root / PROMPT_DIRECTORY
 
     # --- Argument Parsing ---
     parser = argparse.ArgumentParser(
@@ -150,7 +151,7 @@ Example usage (run from project root '~/workspace/adr'):
             final_prompt = PROMPT_SINGLE.format(ADR_FULL_TEXT=adr_text_cleaned)
             print(f"# --- START OF PROMPT FOR {ad_id} (1 part) ---")
             print(final_prompt.strip())
-            print(f"# --- END OF PROMPT FOR {ad_id} ---\n# (Copy the text above, paste in NotebookLM, then use 'prompts/adr-update-review.md')\n")
+            print(f"# --- END OF PROMPT FOR {ad_id} ---\n# (Copy/paste, get confirmation, then use 'prompts/adr-update-review.md')\n")
         
         else:
             # It's too long, split it
@@ -159,14 +160,14 @@ Example usage (run from project root '~/workspace/adr'):
             total_chunks = len(chunks)
             
             for part_num, chunk_content in enumerate(chunks, 1):
+                next_part = part_num + 1
                 if part_num == 1:
                     final_prompt = PROMPT_MULTI_START.format(total=total_chunks, ADR_FULL_TEXT=chunk_content)
                 elif part_num == total_chunks:
                     final_prompt = PROMPT_MULTI_END.format(part_num=part_num, total=total_chunks, ADR_FULL_TEXT=chunk_content)
                 else:
-                    final_prompt = PROMPT_MULTI_PART.format(part_num=part_num, total=total_chunks, ADR_FULL_TEXT=chunk_content)
+                    final_prompt = PROMPT_MULTI_PART.format(part_num=part_num, total=total_chunks, next_part=next_part, ADR_FULL_TEXT=chunk_content)
                 
-                # Check length of the *chunked* prompt
                 if len(final_prompt) > CHAR_LIMIT:
                      print(f"# !!!!!!!!! WARNING: CHUNK {part_num}/{total_chunks} FOR {ad_id} IS STILL TOO LONG. MANUAL REVIEW NEEDED. !!!!!!!!!")
                 
