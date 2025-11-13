@@ -178,7 +178,7 @@ For bare metal deployments requiring high availability with minimal physical inf
 Traditional Highly Available (HA) clusters require a minimum of three control plane nodes, increasing hardware costs for smaller deployments. OpenShift offers Technology Preview methods to achieve HA with only two main nodes on bare metal.
 
 **Assumption**
-The cluster topology is two nodes cluster.
+The deployment targets a minimal physical footprint HA cluster, utilizing at most two fully functional control plane nodes.
 
 **Alternatives**
 
@@ -193,7 +193,7 @@ The cluster topology is two nodes cluster.
 **Implications**
 
 - **Two-Node Cluster with Fencing (TP):** Requires robust configuration of BMC credentials and Redfish/IPMI access for fencing in the `install-config.yaml`. This is a Technology Preview feature.
-- **Two-Node Cluster with Arbiter (TP):** Requires provisioning and maintaining a third, albeit small, arbiter node instance. This is a Technology Preview feature.
+- **Two-Node Cluster with Arbiter (TP):** Requires provisioning and maintaining a third, albeit small, arbiter node instance. This topology requires enabling the TechPreviewNoUpgrade feature set during installation.
 
 **Decision**
 #TODO: Document the decision for each cluster.#
