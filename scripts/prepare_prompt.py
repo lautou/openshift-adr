@@ -6,13 +6,11 @@ from pathlib import Path
 
 # --- Configuration (Relative to project root) ---
 ADR_DIRECTORY = "adr"
-PROMPT_DIRECTORY = "prompts"
 CHAR_LIMIT = 1950  # A safe buffer below 2000
 
-# --- **FIX 2**: Updated Prompt "Wrapper" Text (Internalized and Silent) ---
-# We estimate the wrapper text adds ~150 chars.
+# --- Prompt "Wrapper" Text (Internalized) ---
 WRAPPER_ESTIMATE = 150 
-SAFE_CHUNK_LIMIT = CHAR_LIMIT - WRAPPER_ESTIMATE # Max size for the *content*
+SAFE_CHUNK_LIMIT = CHAR_LIMIT - WRAPPER_ESTIMATE
 
 PROMPT_SINGLE = """
 Please read and remember the following Architecture Decision Record text.
@@ -80,32 +78,53 @@ def main():
         project_root = Path.cwd()
 
     adr_dir = project_root / ADR_DIRECTORY
-    prompt_dir = project_root / PROMPT_DIRECTORY
 
     # --- Argument Parsing ---
     parser = argparse.ArgumentParser(
-        description="Generate a set of 'LOAD' prompts for reviewing ADRs.",
+        description="Generate 'LOAD' prompts for one or all ADRs from a file.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Example usage (run from project root '~/workspace/adr'):
-  ./scripts/prepare_prompt.py OCP-BM
-  (This finds 'adr/OCP-BM.md', searches for 'OCP-BM-' prefixes,
-   and generates one or more 'LOAD' prompts for EACH ADR found.)
+  
+  To get all ADRs for a prefix:
+  ./scripts/prepare_prompt.py GITOPS
+
+  To get only one specific ADR:
+  ./scripts/prepare_prompt.py GITOPS-01
 """
     )
     parser.add_argument(
-        "prefix_base",
+        "target",
         type=str,
-        help="The base prefix for the ADRs (e.g., OCP-BM, GITOPS, LOG)"
+        help="The base prefix (e.g., OCP-BM) OR a specific ADR ID (e.g., OCP-BM-01)"
     )
     args = parser.parse_args()
 
-    # --- Variable Derivation ---
-    prefix_base = args.prefix_base
-    filename_str = f"{prefix_base}.md"
-    prefix_for_regex = f"{prefix_base}-"
+    # --- ** NEW LOGIC: Distinguish Prefix from ID ** ---
+    target = args.target
+    
+    # Regex to check if the target is a specific ID (e.g., "OCP-BM-01")
+    # It looks for a pattern like (ANYTHING-ANYTHING)-(DIGITS)
+    id_pattern = re.compile(r'^(.+)-(\d+)$')
+    id_match = id_pattern.match(target)
+    
+    if id_match:
+        # --- CASE 1: User gave a specific ID (e.g., OCP-BM-01) ---
+        prefix_base = id_match.group(1)  # e.g., "OCP-BM"
+        filename_str = f"{prefix_base}.md"
+        # We will search for the *exact* ID
+        # \b ensures we get OCP-BM-01 and not OCP-BM-011
+        search_pattern_str = r"^\#\#\s*({target_id})\b".format(target_id=re.escape(target))
+    else:
+        # --- CASE 2: User gave a base prefix (e.g., OCP-BM) ---
+        prefix_base = target  # e.g., "OCP-BM"
+        filename_str = f"{prefix_base}.md"
+        # We will search for *all* ADRs with this prefix
+        prefix_for_regex = f"{prefix_base}-"
+        search_pattern_str = r"^\#\#\s*({prefix_dash}\S+)".format(prefix_dash=re.escape(prefix_for_regex))
     
     filename_path = adr_dir / filename_str
+    # --- End of New Logic ---
 
     # --- Read ADR File ---
     if not filename_path.exists():
@@ -117,27 +136,39 @@ Example usage (run from project root '~/workspace/adr'):
         print(f"Error: Could not read file {filename_path}: {e}", file=sys.stderr)
         sys.exit(1)
 
-    # --- Regex Logic to split file into ADRs ---
-    pattern = re.compile(
-        r"^\#\#\s*{prefix}\S+".format(prefix=re.escape(prefix_for_regex)),
-        re.MULTILINE | re.IGNORECASE
-    )
-    
+    # --- Regex Logic to find all ADRs ---
+    pattern = re.compile(search_pattern_str, re.MULTILINE | re.IGNORECASE)
     matches = list(pattern.finditer(adr_content))
     
     if not matches:
-        print(f"Error: No ADRs with prefix '{prefix_for_regex}' found in {filename_str}.", file=sys.stderr)
+        print(f"Error: No ADRs matching '{target}' found in {filename_str}.", file=sys.stderr)
         sys.exit(1)
         
-    print(f"Found {len(matches)} ADRs in {filename_str}. Generating 'LOAD' prompts...\n")
+    print(f"Found {len(matches)} ADR(s) in {filename_str}. Generating 'LOAD' prompts...\n")
 
     # --- Iterate through matches and slice the content ---
     for i, current_match in enumerate(matches):
         start_index = current_match.start()
         
         end_index = len(adr_content)
+        # Find the start of the *next* ADR in the file
+        next_match_start = -1
         if i + 1 < len(matches):
-            end_index = matches[i + 1].start()
+             next_match_start = matches[i+1].start()
+        
+        # If we are processing a specific ID, we must find the *actual* next ADR
+        # in the file, not just the next one in our filtered list.
+        if id_match:
+            all_adr_pattern = re.compile(r"^\#\#\s*([A-Z]+(?:-[A-Z]+)?-\d+)", re.MULTILINE | re.IGNORECASE)
+            all_matches_in_file = list(all_adr_pattern.finditer(adr_content))
+            for j, match_in_file in enumerate(all_matches_in_file):
+                if match_in_file.start() == start_index and j + 1 < len(all_matches_in_file):
+                    end_index = all_matches_in_file[j+1].start()
+                    break
+            else: # We are at the last ADR in the file
+                end_index = len(adr_content)
+        elif next_match_start != -1:
+             end_index = next_match_start
             
         adr_full_text_raw = adr_content[start_index:end_index]
         adr_text_cleaned = adr_full_text_raw.split("\n---\n")[0].strip()
@@ -147,7 +178,6 @@ Example usage (run from project root '~/workspace/adr'):
 
         # --- Check Length and Generate Prompt(s) ---
         if len(adr_text_cleaned) + WRAPPER_ESTIMATE <= CHAR_LIMIT:
-            # It fits in one prompt
             final_prompt = PROMPT_SINGLE.format(ADR_FULL_TEXT=adr_text_cleaned)
             print(f"# --- START OF PROMPT FOR {ad_id} (1 part) ---")
             print(final_prompt.strip())
