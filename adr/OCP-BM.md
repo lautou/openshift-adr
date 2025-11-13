@@ -144,18 +144,18 @@ LUKS encryption is configured for the RHCOS root file system on bare metal nodes
 
 **Alternatives**
 
-- TPM v2 Only Unlock (Policy-Based Decryption)
-- TPM v2 and Tang Server Combination (Policy-Based Decryption)
+- TPM v2 Only Unlock (Policy-Based Decryption) (TP)
+- TPM v2 and Tang Server Combination (Policy-Based Decryption) (TP)
 
 **Justification**
 
-- **TPM v2 Only Unlock (Policy-Based Decryption):** This uses the Trusted Platform Module (TPM) chip on the host to seal the decryption key, ensuring the key is released only if the boot measurement is correct. This requires no external infrastructure dependency for unlocking.
-- **TPM v2 and Tang Server Combination (Policy-Based Decryption):** This method uses a network-bound key release (Tang) in addition to TPM measurements, allowing recovery of the system even if the TPM measurements change (e.g., BIOS upgrade). The security threshold can be customized, requiring a subset of available Tang servers plus the local TPM to decrypt the root volume.
+- **TPM v2 Only Unlock (Policy-Based Decryption) (TP):** This uses the Trusted Platform Module (TPM) chip on the host to seal the decryption key, ensuring the key is released only if the boot measurement is correct. This requires no external infrastructure dependency for unlocking.
+- **TPM v2 and Tang Server Combination (Policy-Based Decryption) (TP):** This method uses a network-bound key release (Tang) in addition to TPM measurements, allowing recovery of the system even if the TPM measurements change (e.g., BIOS upgrade). The security threshold can be customized, requiring a subset of available Tang servers plus the local TPM to decrypt the root volume.
 
 **Implications**
 
 - **TPM v2 Only Unlock (Policy-Based Decryption):** Simplest configuration, but node recovery after expected changes (like firmware updates that break TPM measurements) may require manual intervention.
-- **TPM v2 and Tang Server Combination (Policy-Based Decryption):** Requires deployment and maintenance of external Tang server infrastructure (highly available). Offers greater flexibility in node recovery and resilience against unintended TPM measurement changes.
+- **TPM v2 and Tang Server Combination (Policy-Based Decryption) (TP):** Requires deployment and maintenance of external Tang server infrastructure (highly available). Offers greater flexibility in node recovery and resilience against unintended TPM measurement changes.
 
 **Decision**
 #TODO: Document the decision for each cluster.#
