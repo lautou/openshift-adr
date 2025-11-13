@@ -1,11 +1,12 @@
 You are an expert architect. Source: all uploaded product docs.
 
-Task: Review the **single ADR text you just read**. Compare its _entire content_ to the product docs for updates (TP flags, deprecations).
+Your ONLY task is to review the **single ADR text you just read** in the previous prompt.
+Compare its _entire content_ (Question, Issue, Assumptions, Alts, etc.) to the product docs for updates.
 
-Report using this exact format:
+Report your findings using this exact format:
 
 **1. ADR Review Result**
-(MUST provide ONE of these 3 outputs)
+(You MUST provide ONE of these 3 outputs)
 
 **--- 1. NO UPDATES ---**
 
@@ -24,19 +25,28 @@ Report using this exact format:
 **Rationale for Update:** [Explain what is **technically outdated or inaccurate** vs. the PDFs. **Do NOT report on #TODO fields.**]
 
 **Updated Architectural Question:** [Reprint or update text]
+
 **Updated Issue or Problem:** [Reprint or update text]
+
 **Updated Assumption:** [Reprint or update text]
+
 **Updated Alternatives:** (Titles only)
 
 - [Alt 1 Title]
 - [Alt 2 Title]
-  **Updated Justification:** (`**[Title]:**` format, _why choose it?_)
+
+**Updated Justification:** (`**[Title]:**` format, _why choose it?_)
+
 - **[Alt 1 Title]:** [Full text...]
 - **[Alt 2 Title]:** [Full text...]
-  **Updated Implications:** (`**[Title]:**` format, _consequence?_)
+
+**Updated Implications:** (`**[Title]:**` format, _consequence?_)
+
 - **[Alt 1 Title]:** [Full text...]
 - **[Alt 2 Title]:** [Full text...]
-  **Updated Agreeing Parties:**
+
+**Updated Agreeing Parties:**
+
 - Person: #TODO#, Role: [Role 1]
 
 **--- 3. OBSOLETE ---**
@@ -49,7 +59,7 @@ Report using this exact format:
 
 **Rules:**
 
-- **Completeness:** If updating, must output _all_ 'Updated' fields.
+- **Completeness:** If updating, you must output _all_ the 'Updated' fields.
 - **Format:** Alts=titles only. Justification/Implications=`**[Title]:** [Text]`.
 - **Parties:** Roles _must_ come from `ad_parties_role_dictionnary.md`.
 - **Brevity:** Be concise and accurate. No filler.
