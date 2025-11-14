@@ -1,15 +1,15 @@
-# OpenShift Container Platform High-Level Strategy
+# ARCHITECTURE DECISION RECORDS FOR: OpenShift Container Platform - General plaftorm high level considerations
 
 ## OCP-BASE-01
 
 **Title**
-Cluster Isolation Strategy
+Environment Isolation Strategy
 
 **Architectural Question**
 How will workloads for different lifecycle stages (e.g., Dev, Test, Prod) be separated and hosted across OpenShift clusters?
 
 **Issue or Problem**
-Isolation is required for security, stability, and adherence to change control policies, balanced against the management overhead of multiple clusters
+Isolation is required for security, stability, and adherence to change control policies, balanced against the management overhead of multiple clusters.
 
 **Assumption**
 N/A
@@ -25,7 +25,7 @@ N/A
 
 **Justification**
 
-- **Consolidated Cluster Model:** Minimizes the infrastructure footprint and simplifies cluster management by consolidating all environments (Dev, Test, Prod) into a single operational cluster. This minimizes cost but requires reliance on OpenShift Namespaces/Projects, ResourceQuotas, NetworkPolicy, and RBAC for isolation.
+- **Consolidated Cluster Model:** Minimizes the infrastructure footprint and simplifies cluster management by consolidating all environments (Dev, Test, Prod) into a single operational cluster. This minimizes cost but requires reliance on OpenShift Namespaces/Projects, ResourceQuotas, NetworkPolicy, RBAC, Security Context Constraints (SCCs), and Pod Security Admission (PSA) for isolation. The inclusion of User Namespaces (TP) can further enhance workload isolation within this model.
 - **Prod/Non-Prod Split Model:** Provides strong isolation between production and non-production workloads, preventing development or testing activities from impacting the production environment. This is often a minimum compliance requirement.
 - **Per-Environment Model:** Offers maximum isolation between all environments (e.g., dev, test, UAT, prod), which is ideal for organizations with strict compliance, security, or change-control requirements for each stage, incurring maximum management overhead.
 
@@ -91,6 +91,144 @@ N/A
 ## OCP-BASE-03
 
 **Title**
+Internet Connectivity Model
+
+**Architectural Question**
+Will the OpenShift cluster be deployed in an environment with direct internet access or a highly restricted (air-gapped) network?
+
+**Issue or Problem**
+The connectivity model dictates how installation files, container images, and cluster updates are sourced, impacting initial complexity and ongoing operational tooling. This decision must be made early, as it significantly constrains the choice of cluster topology and installation platform, as not all options fully support disconnected environments.
+
+**Assumption**
+N/A
+
+**Alternatives**
+
+- Connected (Direct Internet Access)
+- Disconnected (Restricted/Air-Gapped Network)
+
+**Decision**
+#TODO: Document the decision for each cluster.#
+
+**Justification**
+
+- **Connected (Direct Internet Access):** Enables simplified installation and uses the OpenShift Update Service (OSUS) to provide over-the-air updates and update recommendations directly from Red Hat.
+- **Disconnected (Restricted/Air-Gapped Network):** Required for environments with high security constraints or lack of external network access. Requires establishing a mirroring process to synchronize content from the public Red Hat repositories to a local registry.
+
+**Implications**
+
+- **Connected (Direct Internet Access):** Requires stable internet access for all nodes and adherence to firewall egress rules for Red Hat endpoints.
+- **Disconnected (Restricted/Air-Gapped Network):** Significantly increases installation complexity and requires dedicated mirroring infrastructure. For hosted control planes, the ImageContentSourcePolicy (ICSP) for the data plane is managed via the ImageContentSources API.
+
+**Agreeing Parties**
+
+- Person: #TODO#, Role: Enterprise Architect
+- Person: #TODO#, Role: OCP Platform Owner
+- Person: #TODO#, Role: Security Expert
+- Person: #TODO#, Role: Network Expert
+- Person: #TODO#, Role: Operations Expert
+
+---
+
+## OCP-BASE-04
+
+**Title**
+Cluster Topology
+
+**Architectural Question**
+What OpenShift topology should be deployed based on resource availability, HA requirements, and scale for each cluster?
+
+**Issue or Problem**
+Selecting the cluster topology determines the minimum node count, control plane resilience, resource usage efficiency, and suitability for specific use cases (e.g., edge). This choice impacts High Availability (HA) capabilities within a site and influences multi-site strategies.
+
+**Assumption**
+N/A
+
+**Alternatives**
+
+- Standard HA Topology (3+ Control Plane, N+ Workers)
+- Compact HA Topology (3 Combined Control/Worker)
+- Two-Node OpenShift with Arbiter (TNA)
+- Two-Node OpenShift with Fencing (TP)
+- Single Node OpenShift (SNO)
+- Hosted Control Planes (HCP)
+
+**Decision**
+#TODO: Document the decision for each cluster.#
+
+**Justification**
+
+- **Standard HA Topology (3+ Control Plane, N+ Workers):** Provides maximum resilience, scalability, and separation of control plane functions from application workloads onto dedicated worker nodes. Recommended for large or general-purpose production clusters.
+- **Compact HA Topology (3 Combined Control/Worker):** Reduces the hardware footprint and provides a smaller, more resource-efficient cluster. It is suitable for smaller production environments that require high availability, as the three control plane nodes are configured to be schedulable (running workloads).
+- **Two-Node OpenShift with Arbiter (TNA):** A compact, cost-effective OpenShift Container Platform topology that provides high availability (HA). The topology uses two control plane nodes and a lightweight arbiter node to maintain etcd quorum and prevent split brain.
+- **Two-Node OpenShift with Fencing (TP):** Designed for distributed or edge environments where deploying a full three-node cluster is impractical, providing HA with a reduced hardware footprint. Fencing, managed by Pacemaker, isolates unresponsive nodes so the remaining node can safely continue operation.
+- **Single Node OpenShift (SNO):** Ideal for edge computing workloads, portable clouds, and environments with intermittent connectivity or severe resource constraints, such as 5G radio access networks (RAN).
+- **Hosted Control Planes (HCP):** A feature that enables hosting the control plane as pods on a management cluster, optimizing infrastructure costs required for the control planes and improving cluster creation time. This model decouples the control plane from the data plane, providing resiliency, meaning failure of the management cluster component leaves the workload unaffected.
+
+**Implications**
+
+- **Standard HA Topology (3+ Control Plane, N+ Workers):** Requires a minimum of three control plane machines and at least two compute machines. Requires maintaining separate physical hosts for the cluster machines to ensure high availability.
+- **Compact HA Topology (3 Combined Control/Worker):** Infrastructure components (monitoring, registry, ingress) often share resources with the control plane, requiring careful sizing. If resource constraints exist, workload partitioning is strongly recommended to safeguard critical infrastructure pods.
+- **Two-Node OpenShift with Arbiter (TNA):** Requires 2 control plane nodes and 1 arbiter node. The arbiter node must meet minimum system requirements (2 threads/vCPUs, 8 GB RAM, 50 GB storage minimum) and must be a local arbiter node (remote arbiter nodes are not supported).
+- **Two-Node OpenShift with Fencing (TP):** The cluster does not include compute nodes; user workloads run on the two control plane machines. This is a **Technology Preview feature only**. Technology Preview features are not supported with Red Hat production service level agreements (SLAs) and are not recommended for production.
+- **Single Node OpenShift (SNO):** The major tradeoff is the **lack of high availability**, as failure of the single node stops the cluster. Requires a minimum of 8 vCPUs and 120GB of storage. Adding worker nodes later does not expand the cluster control plane or provide HA.
+- **Hosted Control Planes (HCP):** The control plane runs in a single namespace on a management cluster. A Single-Node OpenShift cluster is explicitly not supported as a management cluster. Hosted control planes on non-bare-metal agent machines (TP) and on Red Hat OpenStack Platform (RHOSP) (TP) are Technology Preview features. The management cluster requires at least three worker nodes.
+
+**Agreeing Parties**
+
+- Person: #TODO#, Role: Enterprise Architect
+- Person: #TODO#, Role: OCP Platform Owner
+- Person: #TODO#, Role: Storage Expert
+- Person: #TODO#, Role: Network Expert
+- Person: #TODO#, Role: Infra Leader
+
+---
+
+## OCP-BASE-05
+
+**Title**
+Infrastructure nodes
+
+**Architectural Question**
+Should platform services (e.g., Ingress routers, internal image registry, monitoring, logging, etc.) be isolated onto a dedicated pool of nodes, or co-located with application workloads?
+
+**Issue or Problem**
+Platform services are critical for cluster operation and consume significant resources (CPU, memory, network I/O). Co-locating them with application workloads can lead to resource contention ("noisy neighbor" effect), impacting the stability of both the platform and the applications. However, creating dedicated nodes increases infrastructure cost and management overhead.
+
+**Assumption**
+Cluster has a standard HA topology.
+
+**Alternatives**
+
+- **Co-located on General Worker Nodes:** Platform services are deployed on the default worker pool alongside all other applications.
+- **Dedicated Infrastructure Nodes:** A separate pool of worker nodes is created and reserved (using taints and labels) to run only platform services.
+
+**Decision**
+#TODO: Document the decision for each cluster.#
+
+**Justification**
+
+- **Co-located on General Worker Nodes:** This is the default behavior. It minimizes the number of required nodes and is simpler for small clusters or non-production environments where performance isolation is not a strict requirement.
+- **Dedicated Infrastructure Nodes:** This is the recommended practice for production and large-scale clusters. It provides strong resource isolation, preventing application workloads from impacting critical platform services. It also simplifies resource management, licensing (e.g., not running OpenShift platform services on nodes licensed for specific software), and chargeback for application teams.
+
+**Implications**
+
+- **Co-located on General Worker Nodes:** Requires careful sizing of the general worker pool to account for both application and platform overhead. ResourceQuotas and LimitRanges are critical to prevent contention.
+- **Dedicated Infrastructure Nodes:** Requires creating and managing a separate MachineSet (on platforms that support it) or a manually configured node pool. Platform operators (like ingress, registry, monitoring) must be configured to tolerate the `node-role.kubernetes.io/infra` taint and use node selectors to run on this pool. This requires at least two (preferably three) additional nodes for high availability.
+
+**Agreeing Parties**
+
+- Person: #TODO#, Role: Enterprise Architect
+- Person: #TODO#, Role: OCP Platform Owner
+- Person: #TODO#, Role: Infra Leader
+- Person: #TODO#, Role: Operations Expert
+- Person: #TODO#, Role: Network Expert
+
+---
+
+## OCP-BASE-06
+
+**Title**
 Platform infrastructure
 
 **Status: [MANUAL REVIEW REQUIRED]** _(Installation mode tables are not decoded properly by NotebookLM)_
@@ -135,68 +273,24 @@ N/A
 
 ---
 
-## OCP-BASE-04
+## OCP-BASE-07
 
 **Title**
-Cluster Topology
+Multiple site deployment mode.
 
 **Architectural Question**
-What OpenShift topology should be deployed based on resource availability, HA requirements, and scale for each cluster?
+How will the OpenShift platform be deployed across multiple physical sites (data centers, regions) to meet high availability, disaster recovery, or geo-locality requirements?
 
 **Issue or Problem**
-Selecting the cluster topology determines the minimum node count, control plane resilience, resource usage efficiency, and suitability for specific use cases (e.g., edge). This choice impacts HA capabilities within a site and influences multi-site strategies.
+Deploying a platform across multiple sites introduces significant complexity related to network latency, failure domains, and data replication. A clear strategy is required to balance the operational overhead against the business requirements for resilience and service availability, while adhering to Red Hat supportability guidelines.
 
 **Assumption**
-N/A
+
+Plaftorm infrastructure is self-managed public cloud or on-premise.
 
 **Alternatives**
 
-- Standard Topology (3+ Control Plane, 3+ Workers)
-- Compact Topology (3 Control Plane/Workers)
-- Single Node OpenShift (SNO)
-
-**Decision**
-#TODO: Document the decision for each cluster.#
-
-**Justification**
-
-- **Standard HA (3+ Control Plane, N Workers):** Provides maximum resilience, scalability, and performance isolation by separating control plane functions from application workloads onto dedicated worker nodes. Recommended for large or general-purpose production clusters.
-- **Compact HA (3 Combined Control/Worker):** Reduces the hardware footprint and minimizes network latency between control and worker planes by running all roles on three nodes. Suitable for smaller production environments that require high availability but have resource constraints.
-- **Single Node OpenShift (SNO):** Ideal for edge computing workloads, portable clouds, and environments with intermittent connectivity or severe resource constraints, such as 5G radio access networks (RAN).
-
-**Implications**
-
-- **Standard HA (3+ Control Plane, N Workers):** Requires a minimum of 6 nodes (3 control plane, 3 worker) for production environments, increasing infrastructure costs.
-- **Compact HA (3 Combined Control/Worker):** Infrastructure components (monitoring, registry, ingress) often share resources with the control plane, requiring careful sizing and potentially dedicated infrastructure nodes (infra nodes) for production scale workloads.
-- **Single Node OpenShift (SNO):** The major tradeoff is the **lack of high availability**, as failure of the single node stops the cluster.
-
-**Agreeing Parties**
-
-- Person: #TODO#, Role: Enterprise Architect
-- Person: #TODO#, Role: OCP Platform Owner
-- Person: #TODO#, Role: Storage Expert
-- Person: #TODO#, Role: Network Expert
-- Person: #TODO#, Role: Infra Leader
-
----
-
-## OCP-BASE-05
-
-**Title**
-Disaster recovery site strategy
-
-**Architectural Question**
-What strategy will be adopted to ensure platform and application availability in the event of a complete site failure, considering the chosen cluster topology?
-
-**Issue or Problem**
-A strategy is needed to ensure platform and application availability in the event of a complete site failure, considering the chosen cluster topology.
-
-**Assumption**
-An on-premises deployment across multiple physical sites is planned or considered. Disaster recovery across sites is a requirement. The Cluster Topology (OCP-BASE-04) has been considered.
-
-**Alternatives**
-
-- Stretched Cluster Across Sites (Topology Permitting)
+- Stretched Cluster Across Sites
 - Multi-Cluster (Independent Cluster per Site)
 
 **Decision**
@@ -204,13 +298,20 @@ An on-premises deployment across multiple physical sites is planned or considere
 
 **Justification**
 
-- **Stretched Cluster Across Sites (Topology Permitting):** Provides low Recovery Point Objective (RPO)/Recovery Time Objective (RTO) by running a single control plane spanning two sites. Requires very low latency and high bandwidth between sites to maintain etcd quorum.
-- **Multi-Cluster (Independent Cluster per Site):** Uses independent clusters in geographically separated sites, leveraging asynchronous replication (e.g., ODF Regional-DR [25]) or application-level deployment tools to manage failover. Recommended when site latency is high [4].
+- **Stretched Cluster Across Sites:** Deploys a **single OpenShift cluster** with control plane nodes distributed across multiple logical or physical locations.For OpenShift 4.x, this typically involves **exactly three control plane nodes**, with the Red Hat recommendation being one node in each of **three sites**. This allows the cluster to maintain quorum and remain operational if one site fails. However, Red Hat warns this configuration extends the cluster as a **single failure domain** and should **not** be considered a replacement for a disaster recovery plan.
+- **Multi-Cluster (Independent Cluster per Site):** Deploys a separate, independent OpenShift cluster in each site (e.g., one cluster per region/site). This is Red Hat's **strongly recommended** alternative to a stretched deployment. This model provides clear failure domain isolation. Tools like **Red Hat Advanced Cluster Management (ACM)** are then used to manage the clusters, application deployments, and disaster recovery policies from a single point of control.
 
 **Implications**
 
-- **Stretched Cluster Across Sites (Topology Permitting):** High dependence on ultra-low latency networking. Failures often require coordinated remediation across both sites. Not suitable for environments subject to high latency or jitter.
-- **Multi-Cluster (Independent Cluster per Site):** Higher RPO/RTO than a stretched cluster, but offers greater isolation between failures. Requires managing two distinct cluster control planes.
+- **Stretched Cluster Across Sites:**
+  - **Strict Network Requirements:** The deployment is bound by etcd network performance. The combined disk and network latency and jitter must maintain an etcd peer round trip time of less than 100ms. Note that the etcd peer RTT is an end-to-end test metric distinct from network RTT. For the default 100ms heartbeat interval, the suggested RTT between control plane nodes is less than 33ms, with a maximum of less than 66ms.
+  - **Layered Product Constraints:** Critically, layered products like storage (e.g., OpenShift Data Foundation) have _much_ lower latency requirements (e.g., < 10ms RTT) that will dictate the feasibility of the stretched model.
+  - **Amplified Failure Scenarios:** This model has "additional inherent complexities" and "a higher number of points of failure". The organization **must** extensively test and document cluster behavior during network partitions, latency spikes, and jitter before production use.
+- **Multi-Cluster (Independent Cluster per Site):**
+  - **Recommended Practice:** This approach aligns with Red Hat's recommended practice and avoids the strict low-latency network requirements for the control plane.
+  - **Failure Isolation:** Each cluster is an independent failure domain, preventing a network issue or outage in one site from impacting another site's cluster.
+  - **Management Overhead:** Requires managing multiple independent clusters, though this is the intended use case for tools like Advanced Cluster Management (ACM).
+  - **Application-Level DR:** Failover is not automatic at the cluster level. It must be managed at the application level (e.g., via ACM policies) and data level (e.g., using OpenShift API for Data Protection (OADP) and replication technologies like ODF Regional-DR, which now supports multi volume applications and application execution hooks in recipes).
 
 **Agreeing Parties**
 
@@ -223,7 +324,7 @@ An on-premises deployment across multiple physical sites is planned or considere
 
 ---
 
-## OCP-BASE-06
+## OCP-BASE-08
 
 **Title**
 Intra-Site Availability Zone / Failure Domain Strategy
@@ -240,7 +341,6 @@ N/A
 **Alternatives**
 
 - Single AZ/FD Deployment (No HA)
-- Two AZ/FD Deployment (Limited HA, Not Recommended for Control Plane)
 - Three or More AZ/FD Deployment (Recommended HA for Standard/Compact)
 
 **Decision**
@@ -248,13 +348,13 @@ N/A
 
 **Justification**
 
-- **Single Failure Domain (No AZ/FD separation):** Simplifies network planning and latency management since all nodes reside in one logical or physical area. However, this subjects the entire cluster to a site-wide or rack-level outage event.
-- **Multi-Availability Zone / Failure Domain (Cluster-spanning HA):** Provides maximum resilience by ensuring the control plane's etcd quorum members and worker nodes are distributed across physically isolated domains. This is the preferred approach for production clusters.
+- **Single AZ/FD Deployment (No HA):** Simplifies network planning and latency management since all nodes reside in one logical or physical area. However, this subjects the entire cluster to a site-wide or rack-level outage event.
+- **Three or More AZ/FD Deployment (Recommended HA for Standard/Compact):** Provides maximum resilience by ensuring the control plane's etcd quorum members and worker nodes are distributed across physically isolated domains. This is the preferred approach for production clusters. The core mechanism relies on maintaining strict network latency requirements for etcd; specifically, the suggested Round-Trip Time (RTT) between control plane nodes is **less than 33 ms (with a maximum under 66 ms)** to ensure stability and avoid missed heartbeats. For a healthy cluster, the 99th percentile of the etcd peer RTT should be actively monitored to remain **less than 50 ms**.
 
 **Implications**
 
-- **Single Failure Domain (No AZ/FD separation):** Significantly increases the risk of a Single Point of Failure (SPoF) for OpenShift infrastructure services and the cluster state (etcd).
-- **Multi-Availability Zone / Failure Domain (Cluster-spanning HA):** Requires careful network design to manage inter-AZ latency, especially for the control plane (etcd). Requires that the underlying platform supports multiple availability zones/failure domains.
+- **Single AZ/FD Deployment (No HA):** Significantly increases the risk of a Single Point of Failure (SPoF) for OpenShift infrastructure services and the cluster state (etcd).
+- **Three or More AZ/FD Deployment (Recommended HA for Standard/Compact):** Requires careful network design to manage inter-AZ latency, as the suggested RTT between control plane nodes is **less than 33 ms (max 66 ms)** for etcd stability. Requires that the underlying platform supports multiple availability zones/failure domains (FDs). This approach is necessary to ensure that High Availability workloads can be correctly distributed using node labels (e.g., `topology.kubernetes.io/zone`) as mandated by default TopologySpreadConstraint policies applied to replicated pods in OpenShift.
 
 **Agreeing Parties**
 
@@ -266,49 +366,7 @@ N/A
 
 ---
 
-## OCP-BASE-07
-
-**Title**
-Network Connectivity Model
-
-**Architectural Question**
-Will the OpenShift cluster be deployed in an environment with direct internet access or a highly restricted (air-gapped) network?
-
-**Issue or Problem**
-The connectivity model dictates how installation files, container images, and cluster updates are sourced, impacting initial complexity and ongoing operational tooling.
-
-**Assumption**
-N/A
-
-**Alternatives**
-
-- Connected (Direct Internet Access)
-- Disconnected (Restricted/Air-Gapped Network)
-
-**Decision**
-#TODO: Document the decision for each cluster.#
-
-**Justification**
-
-- **Connected (Direct Internet Access):** Enables simplified installation and uses the OpenShift Update Service (OSUS) to provide over-the-air updates and update recommendations directly from Red Hat.
-- **Disconnected (Restricted/Air-Gapped Network):** Required for environments with high security constraints or lack of external network access. Requires establishing a mirroring process to synchronize content from the public Red Hat repositories to a local registry.
-
-**Implications**
-
-- **Connected (Direct Internet Access):** Requires stable internet access for all nodes and adherence to firewall egress rules for Red Hat endpoints.
-- **Disconnected (Restricted/Air-Gapped Network):** Significantly increases installation complexity and requires dedicated mirroring infrastructure. For hosted control planes, the ImageContentSourcePolicy (ICSP) for the data plane is managed via the ImageContentSources API.
-
-**Agreeing Parties**
-
-- Person: #TODO#, Role: Enterprise Architect
-- Person: #TODO#, Role: OCP Platform Owner
-- Person: #TODO#, Role: Security Expert
-- Person: #TODO#, Role: Network Expert
-- Person: #TODO#, Role: Operations Expert
-
----
-
-## OCP-BASE-08
+## OCP-BASE-09
 
 **Title**
 Mirrored images registry (Disconnected Environments)
@@ -350,7 +408,7 @@ Environment is disconnected (as decided in OCP-BASE-07).
 
 ---
 
-## OCP-BASE-09
+## OCP-BASE-10
 
 **Title**
 Platform Installation and Upgrade Automation Strategy
@@ -359,31 +417,31 @@ Platform Installation and Upgrade Automation Strategy
 What strategy or tooling will be used for automating the installation and ongoing upgrades of OpenShift Container Platform clusters?
 
 **Issue or Problem**
-Manual installation and upgrade processes are prone to human error, lead to configuration drift, and do not scale effectively for a fleet of clusters.
+Manual installation and upgrade processes are prone to human error, lead to configuration drift, and do not scale effectively for a fleet of clusters. A clear automation strategy is needed.
 
 **Assumption**
 N/A
 
 **Alternatives**
 
-- Manual Execution (CLI/Web Console)
-- Automated Provisioning (IPI/Agent/Assisted)
-- Centralized GitOps Orchestration [TECH-PREVIEW]
+- **Manual Installation/Upgrade:** Using the CLI (`openshift-install`) or web console for initial deployment and triggering upgrades manually.
+- **Automated with Corporate Tooling:** Using an existing corporate automation solution (e.g., Ansible, Terraform, custom CI/CD pipelines) to wrap and orchestrate the installation and upgrade processes.
+- **Automated with Red Hat Advanced Cluster Management (RHACM):** Using the native GitOps Zero Touch Provisioning (ZTP) and policy-based management features of RHACM to declaratively manage the entire cluster lifecycle.
 
 **Decision**
 #TODO: Document the decision.#
 
 **Justification**
 
-- **Manual Execution (CLI/Web Console):** Suitable for highly customized, one-off deployments (UPI) or initial test environments, giving granular control over every step. Does not scale well.
-- **Automated Provisioning (IPI/Agent/Assisted):** Leverages the `openshift-install` program or Assisted Installer to deploy the cluster and utilize the Cluster Version Operator (CVO) and Machine Config Operator (MCO) for post-install Day 2 management and rolling upgrades.
-- **Centralized GitOps Orchestration:** Leverages Red Hat Advanced Cluster Management (RHACM) and GitOps Zero Touch Provisioning (ZTP) to manage the entire lifecycle of a fleet of clusters declaratively from a single source of truth (Git).
+- **Manual Installation/Upgrade:** Suitable for initial proof-of-concept (PoC) environments or highly customized, one-off User-Provisioned Infrastructure (UPI) builds where granular control is paramount. This approach does not scale and is not recommended for production.
+- **Automated with Corporate Tooling:** Leverages existing team skills and tools (e.g., Ansible, Terraform). This is a good choice for integrating cluster builds into a pre-existing Infrastructure-as-Code (IaC) framework.
+- **Automated with Red Hat Advanced Cluster Management (RHACM):** This is the strategic Red Hat solution for managing a _fleet_ of clusters at scale. It provides a single, declarative control plane for deploying, upgrading, and enforcing configuration across multiple clusters.
 
 **Implications**
 
-- **Manual Execution (CLI/Web Console):** High reliance on human expertise; difficult to repeat reliably.
-- **Automated Provisioning (IPI/Agent/Assisted):** Requires robust platform credentials for IPI, or careful network/ignition setup for UPI/Agent-based. Post-install upgrades are automated via CVO/MCO.
-- **Centralized GitOps Orchestration:** Requires a separate hub cluster running RHACM. Configuration is complex initially but provides scalable, declarative management for hundreds of clusters.
+- **Manual Installation/Upgrade:** High reliance on human expertise and runbooks; high risk of configuration drift and human error.
+- **Automated with Corporate Tooling:** The organization is responsible for creating and maintaining the automation scripts/playbooks and integrating them with the OpenShift installers and CVO/MCO upgrade operators.
+- **Automated with Red Hat Advanced Cluster Management (RHACM):** Requires a separate "hub" cluster to run RHACM. This introduces higher initial complexity but provides the most scalable, declarative, and repeatable management solution for Day 0 through Day 2 operations.
 
 **Agreeing Parties**
 
@@ -393,45 +451,3 @@ N/A
 - Person: #TODO#, Role: Infra Leader
 
 ---
-
-## OCP-BASE-10
-
-**Title**
-Cluster Sizing Strategy
-
-**Architectural Question**
-What is the methodology for determining the required size (node count, CPU, RAM, GPU types/counts, storage capacity) for control plane, infrastructure, and worker nodes for each OpenShift cluster?
-
-**Issue or Problem**
-Under-sizing leads to stability problems, resource exhaustion, and application degradation. Over-sizing leads to unnecessary infrastructure costs and poor utilization.
-
-**Assumption**
-N/A
-
-**Alternatives**
-
-- Rule-of-Thumb / Default Minimum
-- Application Load-Based Capacity Planning
-- Dynamic Scaling with MachineSets
-
-**Decision**
-#TODO: Document the decision for each cluster.#
-
-**Justification**
-
-- **Rule-of-Thumb / Default Minimum:** Uses standard Red Hat recommendations (e.g., 3 control plane nodes, specific RAM/CPU minimums). This minimizes planning time and ensures the cluster meets basic stability criteria.
-- **Application Load-Based Capacity Planning:** Methodology based on modeling peak resource demand and application performance requirements (e.g., latency, throughput, anticipated number of pods). The OpenShift Cluster Capacity Tool can assist in estimating pod density limits.
-- **Dynamic Scaling with MachineSets:** Defines minimum and maximum boundaries and relies on the Cluster Autoscaler (based on Machine API/MachineSets) to automatically adjust the number of worker nodes based on real-time application demand.
-
-**Implications**
-
-- **Rule-of-Thumb / Default Minimum:** May result in significant over- or under-provisioning if application requirements deviate greatly from average assumptions.
-- **Application Load-Based Capacity Planning:** High upfront effort in modeling and prediction, but results in optimized resource utilization and capacity guarantees.
-- **Dynamic Scaling with MachineSets:** Only applicable on platforms supporting the Machine API (e.g., cloud platforms, bare metal IPI). Requires defining cloud provider credentials and managing MachineSet resource definitions.
-
-**Agreeing Parties**
-
-- Person: #TODO#, Role: Enterprise Architect
-- Person: #TODO#, Role: OCP Platform Owner
-- Person: #TODO#, Role: Infra Leader
-- Person: #TODO#, Role: Operations Expert
